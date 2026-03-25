@@ -1,0 +1,27 @@
+version: 1
+allow:
+  public:
+    runs: [run_id, created_at, question, params, status, artifacts_path]
+    audit_logs: [id, ts, run_id, actor, action, payload]
+    admissions: [subject_id, hadm_id, admittime]
+    diagnoses_icd: [subject_id, hadm_id, icd_code, icd_version]
+    labevents: [subject_id, hadm_id, itemid, charttime, valuenum]
+    d_labitems: [itemid, label]
+    prescriptions: [subject_id, hadm_id, starttime, stoptime, drug]
+    pharmacy: [subject_id, hadm_id, starttime, stoptime, medication]
+
+  mimiciv:
+    admissions: [subject_id, hadm_id, admittime]
+    diagnoses_icd: [subject_id, hadm_id, icd_code, icd_version]
+    labevents: [subject_id, hadm_id, itemid, charttime, valuenum]
+    d_labitems: [itemid, label]
+    prescriptions: [subject_id, hadm_id, starttime, stoptime, drug]
+    pharmacy: [subject_id, hadm_id, starttime, stoptime, medication]
+
+  mimiciv_full:
+    admissions: [subject_id, hadm_id, admittime]
+    diagnoses_icd: [subject_id, hadm_id, icd_code, icd_version]
+    labevents: [subject_id, hadm_id, itemid, charttime, valuenum]
+    d_labitems: [itemid, label]
+    prescriptions: [subject_id, hadm_id, starttime, stoptime, drug]
+    pharmacy: [subject_id, hadm_id, starttime, stoptime, medication]

@@ -1,0 +1,88 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ecg
+      POSTGRES_PASSWORD: ecg
+      POSTGRES_DB: ecg
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      default:
+        aliases:
+          - postgres
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ./services/api
+    environment:
+      ARTIFACTS_DIR: /storage/artifacts
+      DATABASE_URL: postgresql://ecg:ecg@db:5432/ecg
+      META_DATABASE_URL: postgresql://ecg:ecg@db:5432/ecg
+      DATA_DATABASE_URL: postgresql://ecg:ecg@db:5432/ecg
+      SCHEMA_WHITELIST_PATH: /config/schema_whitelist.yaml
+      DATA_SCHEMA: "${DATA_SCHEMA:-mimiciv}"
+      DEMO_DATA_DIR: "${ECG_DATA_DIR:-/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1}"
+      DEMO_MANIFEST_PATH: "${ECG_MANIFEST_PATH:-/storage/ecg_manifest.parquet}"
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen3:14b
+      OLLAMA_EMBEDDING_MODEL: qwen3-embedding:0.6b
+    volumes:
+      - ./storage:/storage
+      - "${MIMIC_DATA_HOST_DIR:-./data}:/data:ro"
+      - ./config:/config:ro
+      - ./pipelines:/app/pipelines:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  worker:
+    build:
+      context: ./services/api
+    environment:
+      ARTIFACTS_DIR: /storage/artifacts
+      DATABASE_URL: postgresql://ecg:ecg@db:5432/ecg
+      META_DATABASE_URL: postgresql://ecg:ecg@db:5432/ecg
+      DATA_DATABASE_URL: postgresql://ecg:ecg@db:5432/ecg
+      SCHEMA_WHITELIST_PATH: /config/schema_whitelist.yaml
+      DATA_SCHEMA: "${DATA_SCHEMA:-mimiciv}"
+      DEMO_DATA_DIR: "${ECG_DATA_DIR:-/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1}"
+      DEMO_MANIFEST_PATH: "${ECG_MANIFEST_PATH:-/storage/ecg_manifest.parquet}"
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen3:14b
+      OLLAMA_EMBEDDING_MODEL: qwen3-embedding:0.6b
+    volumes:
+      - ./storage:/storage
+      - "${MIMIC_DATA_HOST_DIR:-./data}:/data:ro"
+      - ./:/workspace
+    working_dir: /app
+    command:
+      - uv
+      - run
+      - python
+      - /workspace/scripts/ecg_features_worker.py
+      - --artifacts-root
+      - /storage/artifacts
+      - --data-dir
+      - "${ECG_DATA_DIR:-/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1}"
+      - --global-manifest
+      - "${ECG_MANIFEST_PATH:-/storage/ecg_manifest.parquet}"
+      - --poll-interval-sec
+      - "2"
+      - --log-level
+      - INFO
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  pgdata:

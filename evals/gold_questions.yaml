@@ -1,0 +1,384 @@
+- id: G001
+  category: electrolyte
+  name: hyperkalemia_k55_default_window
+  cohort_template: electrolyte_hyperkalemia
+  params:
+    k_threshold: 5.5
+    label_keyword: potassium
+    window_hours: 6
+  expectations:
+    cohort_subjects_min: 50
+    cohort_subjects_max: 50000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G002
+  category: electrolyte
+  name: hyperkalemia_k60_severe
+  cohort_template: electrolyte_hyperkalemia
+  params:
+    k_threshold: 6.0
+    label_keyword: potassium
+    window_hours: 6
+  expectations:
+    cohort_subjects_min: 20
+    cohort_subjects_max: 20000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G003
+  category: electrolyte
+  name: hypokalemia_icd10_e876
+  cohort_template: diagnosis_icd
+  params:
+    icd_prefixes:
+      - E876
+    window_hours: 24
+  expectations:
+    cohort_subjects_min: 30
+    cohort_subjects_max: 50000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G004
+  category: electrolyte
+  name: hyperkalemia_icd_mixed
+  cohort_template: diagnosis_icd
+  params:
+    icd_prefixes:
+      - E875
+      - "2767"
+    window_hours: 24
+  expectations:
+    cohort_subjects_min: 30
+    cohort_subjects_max: 50000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G005
+  category: diagnosis
+  name: afib_icd_mixed
+  cohort_template: diagnosis_icd
+  params:
+    icd_prefixes:
+      - I48
+      - "42731"
+    window_hours: 24
+  expectations:
+    cohort_subjects_min: 50
+    cohort_subjects_max: 80000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G006
+  category: diagnosis
+  name: stemi_icd_mixed
+  cohort_template: diagnosis_icd
+  params:
+    icd_prefixes:
+      - I21
+      - "410"
+    window_hours: 24
+  expectations:
+    cohort_subjects_min: 30
+    cohort_subjects_max: 60000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G007
+  category: diagnosis
+  name: heart_failure_icd_mixed
+  cohort_template: diagnosis_icd
+  params:
+    icd_prefixes:
+      - I50
+      - "428"
+    window_hours: 24
+  expectations:
+    cohort_subjects_min: 50
+    cohort_subjects_max: 90000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G008
+  category: diagnosis
+  name: vtach_icd_mixed
+  cohort_template: diagnosis_icd
+  params:
+    icd_prefixes:
+      - I47
+      - "4271"
+    window_hours: 24
+  expectations:
+    cohort_subjects_min: 20
+    cohort_subjects_max: 40000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G009
+  category: exposure
+  name: amiodarone_pre24_post24
+  cohort_template: medication_exposure
+  params:
+    source: prescriptions
+    drug_keywords:
+      - amiodarone
+    pre_hours: 24
+    post_hours: 24
+  expectations:
+    cohort_subjects_min: 20
+    cohort_subjects_max: 50000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G010
+  category: exposure
+  name: metoprolol_pre12_post48
+  cohort_template: medication_exposure
+  params:
+    source: prescriptions
+    drug_keywords:
+      - metoprolol
+    pre_hours: 12
+    post_hours: 48
+  expectations:
+    cohort_subjects_min: 30
+    cohort_subjects_max: 70000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G011
+  category: exposure
+  name: furosemide_pre24_post24
+  cohort_template: medication_exposure
+  params:
+    source: prescriptions
+    drug_keywords:
+      - furosemide
+    pre_hours: 24
+    post_hours: 24
+  expectations:
+    cohort_subjects_min: 30
+    cohort_subjects_max: 70000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding
+
+- id: G012
+  category: exposure
+  name: potassium_chloride_pre6_post24
+  cohort_template: medication_exposure
+  params:
+    source: prescriptions
+    drug_keywords:
+      - potassium chloride
+    pre_hours: 6
+    post_hours: 24
+  expectations:
+    cohort_subjects_min: 20
+    cohort_subjects_max: 40000
+    required_artifacts:
+      - cohort.parquet
+      - ecg_qc.parquet
+      - ecg_features.parquet
+      - report.md
+    qc:
+      pass_rate_min: 0.60
+    features:
+      mean_hr_min: 30
+      mean_hr_max: 180
+    report:
+      must_have_sections:
+        - Cohort definition
+        - Data & QC
+        - Results
+        - Limitations
+      must_mention:
+        - missing
+        - confounding

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECG Copilot Agent UI</title>
+  <style>
+    :root{--bg:#f5f2ea;--card:#fffdf8;--text:#1f2833;--muted:#5a6877;--line:#d7d0c1;--brand:#1f7f6b;--ok:#1f8f57;--bad:#b24853;--warn:#bf7f2c}
+    *{box-sizing:border-box} body{margin:0;font-family:"Space Grotesk","Noto Sans SC","Segoe UI",sans-serif;background:radial-gradient(800px 280px at 90% -10%,rgba(31,127,107,.2),transparent 60%),linear-gradient(#f8f5ee,#eee8dc);color:var(--text);padding:18px}
+    .app{max-width:1240px;margin:0 auto;display:grid;gap:12px}
+    .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 10px 25px rgba(40,50,60,.1)}
+    .hero{padding:14px}.hero h1{margin:0 0 6px;font-size:1.25rem}.hero p{margin:0;color:var(--muted);font-size:.9rem;line-height:1.45}
+    .hero a{display:inline-block;margin-top:8px;text-decoration:none;color:#145a4a;border:1px solid #bfd9d1;border-radius:999px;padding:4px 10px;font-size:.78rem}
+    .layout{display:grid;grid-template-columns:1fr 1.1fr 1fr;gap:12px}
+    .card{padding:12px}.title{margin:0 0 10px;color:var(--muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.08em}
+    .row{margin-bottom:9px}.row:last-child{margin-bottom:0} label{display:block;margin-bottom:4px;font-size:.77rem;color:var(--muted)}
+    input,textarea,button{font:inherit} input,textarea{width:100%;border:1px solid #d8cfbc;border-radius:8px;background:#fff;padding:8px 9px;font-size:.86rem}
+    textarea{min-height:88px;resize:vertical}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .checks{display:flex;flex-wrap:wrap;gap:6px}.checks label{display:inline-flex;gap:5px;align-items:center;border:1px solid #ddd2bf;border-radius:999px;padding:3px 8px;background:#f8f2e6;font-size:.73rem;margin:0}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid transparent;border-radius:9px;padding:8px 12px;font-size:.84rem;font-weight:700;cursor:pointer}
+    .btn.main{background:linear-gradient(135deg,var(--brand),#2aa08a);color:#fff}.btn.ghost{border-color:#c8beab;background:#f8f1e3;color:#4f5d6d}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.meta-item{border:1px solid #dacfb8;border-radius:9px;background:#fff9ef;padding:7px}
+    .k{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em}.v{font-size:.8rem;word-break:break-word}
+    .badge{display:inline-flex;border:1px solid #cfbfa7;border-radius:999px;padding:2px 8px;background:#f7efdf}.ok{color:#1d6f42;background:#e9f7ef;border-color:#afd8bd}.bad{color:#8a2a33;background:#fdebed;border-color:#e6b2b8}.warn{color:#88540f;background:#fdf4e8;border-color:#ebd0a1}
+    .err{display:none;margin-top:8px;border:1px solid #d79ca3;border-radius:9px;background:#fdeef0;color:#7d2630;padding:8px;font-size:.8rem;white-space:pre-wrap}
+    .err.show{display:block}.log,.code{border:1px solid #d8cfbc;border-radius:9px;background:#fffaf0;padding:8px;font-family:"JetBrains Mono",Consolas,monospace;font-size:.75rem;white-space:pre-wrap;overflow:auto}
+    .log{max-height:120px}.code{min-height:180px;max-height:460px}
+    .table-wrap{border:1px solid #d8cfbc;border-radius:9px;overflow:auto;max-height:460px;background:#fffaf0}
+    table{width:100%;border-collapse:collapse;font-size:.76rem} th,td{padding:6px 7px;border-bottom:1px solid #e7decd;text-align:left;vertical-align:top} th{position:sticky;top:0;background:#f7f0e2;color:#5f6f82}
+    .tool{display:inline-flex;border:1px solid #d2c7b2;border-radius:999px;padding:2px 7px;background:#f7f0e2}
+    .group{margin-bottom:9px}.group:last-child{margin-bottom:0}.head{display:flex;justify-content:space-between;color:#607083;font-size:.73rem;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+    .list{display:grid;gap:5px}.item{display:flex;justify-content:space-between;gap:7px;border:1px solid #d9cfbc;border-radius:8px;background:#fffaf1;padding:5px 7px;text-decoration:none;color:#2a3543;font-size:.75rem}.item:hover{border-color:var(--brand);background:#eefaf6}
+    .plots{margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:7px}.plot{border:1px solid #d8cfbc;border-radius:9px;background:#fffaf1;overflow:hidden}.plot img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block;background:#f1e8d6}.plot a{display:block;padding:5px 6px;font-size:.7rem;color:#4f6073;text-decoration:none}
+    @media (max-width:1100px){.layout{grid-template-columns:1fr}} @media (max-width:700px){.grid2,.meta,.plots{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="hero">
+      <h1>Agent 问答页</h1>
+      <p>输入问题后显示 plan.json、step 执行日志（tool / 耗时 / 状态）、artifacts（report / plots / tables），失败时给出明确错误类型。</p>
+      <a href="/ui/">回到 Workflow Studio</a>
+    </section>
+
+    <section class="layout">
+      <article class="card">
+        <h2 class="title">Ask Agent</h2>
+        <div class="row"><label for="q">问题</label><textarea id="q" placeholder="例如：入院 6 小时 K>5.5 的患者，ECG 特征分布如何？"></textarea></div>
+        <div class="row grid2">
+          <div><label for="runId">Run ID（留空=每次自动新建）</label><input id="runId" type="text" /></div>
+          <div><label for="topK">kb_top_k</label><input id="topK" type="number" min="1" max="20" value="5" /></div>
+        </div>
+        <div class="row grid2">
+          <div><label for="maxRec">max_records_per_run</label><input id="maxRec" type="number" min="10" max="5000" value="500" /></div>
+          <div><label>快速问题</label><div class="checks"><button class="btn ghost quick" data-q="入院 6 小时 K>5.5 的患者，ECG mean_hr 与 RR std 的总体分布是什么？">高钾</button></div></div>
+        </div>
+        <div class="row"><label>kb_doc_types</label><div class="checks" id="docChecks"></div></div>
+        <div class="actions"><button id="ask" class="btn main">提问并执行</button><button id="reset" class="btn ghost">清空</button></div>
+
+        <div class="meta">
+          <div class="meta-item"><div class="k">run_id</div><div id="runView" class="v">-</div></div>
+          <div class="meta-item"><div class="k">status</div><div id="statusView" class="v badge">idle</div></div>
+          <div class="meta-item"><div class="k">error_type</div><div id="typeView" class="v badge">-</div></div>
+          <div class="meta-item"><div class="k">duration</div><div id="durView" class="v">-</div></div>
+        </div>
+        <div id="err" class="err"></div>
+        <div id="live" class="log">等待执行。</div>
+      </article>
+
+      <article class="card">
+        <h2 class="title">Plan + Steps</h2>
+        <div class="row"><label>plan.json</label><div id="plan" class="code">暂无 plan.json</div></div>
+        <div class="row"><label>step 日志</label>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>tool</th><th>status</th><th>duration(s)</th><th>output</th><th>error</th></tr></thead>
+              <tbody id="steps"><tr><td colspan="6">暂无执行日志。</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2 class="title">Artifacts</h2>
+        <div class="group"><div class="head"><span>Report</span><span id="cReport">0</span></div><div id="report" class="list"></div></div>
+        <div class="group"><div class="head"><span>Plots</span><span id="cPlot">0</span></div><div id="plot" class="list"></div><div id="plotGrid" class="plots"></div></div>
+        <div class="group"><div class="head"><span>Tables</span><span id="cTable">0</span></div><div id="table" class="list"></div></div>
+        <div class="group"><div class="head"><span>Other</span><span id="cOther">0</span></div><div id="other" class="list"></div></div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const API = "";
+    const DOC_TYPES = ["template", "qc", "feature", "report", "security"];
+    const state = { runId: "", timer: null, logs: [], hasTrace: false };
+
+    const el = {
+      q: document.getElementById("q"), runId: document.getElementById("runId"), topK: document.getElementById("topK"), maxRec: document.getElementById("maxRec"),
+      ask: document.getElementById("ask"), reset: document.getElementById("reset"), docChecks: document.getElementById("docChecks"),
+      runView: document.getElementById("runView"), statusView: document.getElementById("statusView"), typeView: document.getElementById("typeView"), durView: document.getElementById("durView"),
+      err: document.getElementById("err"), live: document.getElementById("live"), plan: document.getElementById("plan"), steps: document.getElementById("steps"),
+      report: document.getElementById("report"), plot: document.getElementById("plot"), table: document.getElementById("table"), other: document.getElementById("other"), plotGrid: document.getElementById("plotGrid"),
+      cReport: document.getElementById("cReport"), cPlot: document.getElementById("cPlot"), cTable: document.getElementById("cTable"), cOther: document.getElementById("cOther"),
+    };
+
+    const esc = (x) => String(x || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const fmtSec = (x) => Number.isFinite(Number(x)) ? Number(x).toFixed(3) : "-";
+    const size = (n) => { const x = Number(n || 0); if (x < 1024) return `${x} B`; if (x < 1024 * 1024) return `${(x / 1024).toFixed(1)} KB`; return `${(x / 1048576).toFixed(1)} MB`; };
+
+    function setBadge(node, text, tone = "") { node.textContent = text; node.className = `v badge ${tone}`.trim(); }
+    function setRun(runId) { state.runId = String(runId || "").trim(); el.runView.textContent = state.runId || "-"; }
+    function showErr(msg) { const t = String(msg || "").trim(); el.err.textContent = t; el.err.classList.toggle("show", !!t); }
+    function log(msg) { const t = `[${new Date().toLocaleTimeString()}] ${msg}`; state.logs.unshift(t); state.logs = state.logs.slice(0, 20); el.live.textContent = state.logs.join("\n"); }
+
+    function artifactUrl(runId, name) { return `${API}/runs/${encodeURIComponent(runId)}/artifact/${String(name).split("/").map(encodeURIComponent).join("/")}`; }
+    function classifyArtifact(name) { const s = String(name || "").toLowerCase(); if (s.endsWith("report.md") || s.includes("final_answer") || s.includes("report")) return "report"; if (s.startsWith("plots/") || /\.(png|jpg|jpeg|svg)$/.test(s)) return "plot"; if (s.startsWith("analysis_tables/") || s.endsWith(".parquet") || s.endsWith(".csv")) return "table"; return "other"; }
+
+    async function apiJson(url, init = {}) {
+      const resp = await fetch(url, init); const txt = await resp.text(); let data = null;
+      if (txt) { try { data = JSON.parse(txt); } catch { data = txt; } }
+      if (!resp.ok) {
+        const msg = typeof data === "object" && data ? ((data.detail && data.detail.message) || data.detail || `HTTP ${resp.status}`) : (String(data || `HTTP ${resp.status}`));
+        const err = new Error(msg); err.httpStatus = resp.status; err.payload = data; throw err;
+      }
+      return data;
+    }
+
+    function inferType(status, errMsg, trace, code = 0) {
+      const m = `${String(errMsg || "")} ${String(trace?.error || "")}`.toLowerCase();
+      const failed = Array.isArray(trace?.steps) ? trace.steps.find((s) => String(s.status).toLowerCase() === "failed") : null;
+      if (status === "REJECTED" || code === 403 || /rejected|not allowed|forbidden|patient-level/.test(m)) return ["tool_denied", "bad"];
+      if (status === "FAILED" && (!Array.isArray(trace?.steps) || trace.steps.length === 0)) return ["planner_fail", "warn"];
+      if ((failed && failed.tool === "extract_ecg_features" && /qc|quality/.test(m)) || /qc_fail/.test(m)) return ["qc_fail", "warn"];
+      if (status === "FAILED") return ["runtime_fail", "bad"];
+      return ["-", ""];
+    }
+
+    function stopPoll() { if (state.timer) { clearInterval(state.timer); state.timer = null; } }
+    function startPoll(runId) { stopPoll(); state.timer = setInterval(async () => { await refreshRunStatus(runId); if (state.hasTrace) stopPoll(); }, 1500); }
+
+    async function refreshRunStatus(runId) {
+      if (!runId) return;
+      try {
+        const run = await apiJson(`${API}/runs/${encodeURIComponent(runId)}`);
+        const s = String(run.status || "UNKNOWN");
+        if (s.includes("SUCCEEDED")) setBadge(el.statusView, s, "ok");
+        else if (s.includes("FAILED") || s.includes("REJECTED")) setBadge(el.statusView, s, "bad");
+        else setBadge(el.statusView, s, "warn");
+      } catch (e) { log(`读取 run 状态失败: ${e.message || e}`); }
+    }
+
+    async function readJsonIfExists(runId, artifactName) {
+      try { const r = await fetch(artifactUrl(runId, artifactName)); if (!r.ok) return null; return await r.json(); } catch { return null; }
+    }
+
+    function renderLinks(node, list, runId) {
+      if (!list.length) { node.innerHTML = '<div style="font-size:.75rem;color:#6b7888;">暂无</div>'; return; }
+      node.innerHTML = list.map((a) => `<a class="item" target="_blank" rel="noopener" href="${artifactUrl(runId, a.name)}"><span>${esc(a.name)}</span><span>${size(a.size_bytes)}</span></a>`).join("");
+    }
+
+    function renderPlots(list, runId) {
+      const imgs = list.filter((a) => /\.(png|jpg|jpeg|svg)$/i.test(a.name)).slice(0, 8);
+      el.plotGrid.innerHTML = imgs.map((a) => `<div class="plot"><img src="${artifactUrl(runId, a.name)}" alt="${esc(a.name)}" /><a target="_blank" rel="noopener" href="${artifactUrl(runId, a.name)}">${esc(a.name)}</a></div>`).join("");
+    }
+
+    function renderSteps(steps) {
+      if (!Array.isArray(steps) || !steps.length) { el.steps.innerHTML = '<tr><td colspan="6">暂无执行日志。</td></tr>'; return; }
+      el.steps.innerHTML = steps.map((s, i) => {
+        const st = String(s.status || "unknown"); const tone = st === "succeeded" ? "ok" : (st === "failed" ? "bad" : "warn");
+        const outs = Array.isArray(s.output_paths) ? s.output_paths.join(", ") : "-";
+        return `<tr><td>${i + 1}</td><td><span class="tool">${esc(s.tool || "-")}</span></td><td><span class="badge ${tone}">${esc(st)}</span></td><td>${fmtSec(s.duration_seconds)}</td><td>${esc(outs)}</td><td>${esc(s.error || "-")}</td></tr>`;
+      }).join("");
+    }
+
+    async function loadRun(runId) {
+      const artifacts = await apiJson(`${API}/runs/${encodeURIComponent(runId)}/artifacts`);
+      const groups = { report: [], plot: [], table: [], other: [] };
+      artifacts.forEach((a) => groups[classifyArtifact(a.name)].push(a));
+      el.cReport.textContent = String(groups.report.length); el.cPlot.textContent = String(groups.plot.length); el.cTable.textContent = String(groups.table.length); el.cOther.textContent = String(groups.other.length);
+      renderLinks(el.report, groups.report, runId); renderLinks(el.plot, groups.plot, runId); renderLinks(el.table, groups.table, runId); renderLinks(el.other, groups.other, runId); renderPlots(groups.plot, runId);
+
+      const plan = await readJsonIfExists(runId, "plan.json");
+      el.plan.textContent = plan ? JSON.stringify(plan, null, 2) : "暂无 plan.json";
+
+      const trace = await readJsonIfExists(runId, "agent_trace.json");
+      if (trace) {
+        state.hasTrace = true;
+        renderSteps(trace.steps || []);
+        el.durView.textContent = `${fmtSec(trace.duration_seconds)} s`;
+        const status = String(trace.status || "UNKNOWN");
+        if (status.includes("SUCCEEDED")) setBadge(el.statusView, status, "ok");
+        else if (status.includes("FAILED") || status.includes("REJECTED")) setBadge(el.statusView, status, "bad");
+        else setBadge(el.statusView, status, "warn");
+        const [etype, tone] = inferType(status, trace.error, trace, 0);
+        setBadge(el.typeView, etype, tone);
+        if (trace.error) showErr(trace.error);
+      }
+    }
+
+    function buildDocChecks() {
+      el.docChecks.innerHTML = DOC_TYPES.map((t) => `<label><input type="checkbox" class="doc" value="${t}" checked />${t}</label>`).join("");
+    }
+
+    function resetAll() {
+      stopPoll(); state.hasTrace = false; state.logs = []; el.live.textContent = "等待执行。"; showErr("");
+      setBadge(el.statusView, "idle"); setBadge(el.typeView, "-"); el.durView.textContent = "-"; el.plan.textContent = "暂无 plan.json"; el.steps.innerHTML = '<tr><td colspan="6">暂无执行日志。</td></tr>';
+      [el.report, el.plot, el.table, el.other].forEach((n) => n.innerHTML = ""); el.plotGrid.innerHTML = ""; el.cReport.textContent = "0"; el.cPlot.textContent = "0"; el.cTable.textContent = "0"; el.cOther.textContent = "0";
+    }
+
+    async function askAgent() {
+      const question = String(el.q.value || "").trim();
+      if (!question) { showErr("请输入问题后再执行。"); return; }
+      const topK = Number(el.topK.value || 5); const maxRec = Number(el.maxRec.value || 500);
+      if (!Number.isFinite(topK) || topK < 1 || topK > 20) { showErr("kb_top_k 必须在 1-20 之间。"); return; }
+      if (!Number.isFinite(maxRec) || maxRec < 10 || maxRec > 5000) { showErr("max_records_per_run 必须在 10-5000 之间。"); return; }
+
+      const runId = String(el.runId.value || "").trim() || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-agent`);
+      resetAll(); setRun(runId); setBadge(el.statusView, "AGENT_RUNNING", "warn");
+      const docTypes = Array.from(document.querySelectorAll(".doc")).filter((n) => n.checked).map((n) => n.value);
+      const body = { question, run_id: runId, kb_top_k: Math.floor(topK), constraints: { max_records_per_run: Math.floor(maxRec) } };
+      if (docTypes.length) body.kb_doc_types = docTypes;
+
+      log(`提交问题，run_id=${runId}`); log("调用 /agent/ask ..."); state.hasTrace = false; startPoll(runId); el.ask.disabled = true;
+      try {
+        const res = await apiJson(`${API}/agent/ask`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        log(`执行完成，status=${res.status}`);
+        setBadge(el.statusView, String(res.status || "SUCCEEDED"), res.ok ? "ok" : "bad");
+        await loadRun(res.run_id || runId);
+      } catch (e) {
+        const code = Number(e.httpStatus || 0);
+        const detail = e.payload && typeof e.payload === "object" ? e.payload.detail : null;
+        const rid = String((detail && detail.run_id) || runId || "").trim(); if (rid) setRun(rid);
+        const status = code === 403 ? "REJECTED" : "FAILED"; setBadge(el.statusView, status, "bad");
+        log(`执行失败: ${e.message || e}`); showErr(e.message || String(e));
+        const trace = rid ? await readJsonIfExists(rid, "agent_trace.json") : null;
+        const [etype, tone] = inferType(status, e.message, trace, code); setBadge(el.typeView, etype, tone);
+        if (rid) { try { await loadRun(rid); } catch (ex) { log(`读取 run 详情失败: ${ex.message || ex}`); } }
+      } finally {
+        el.ask.disabled = false; stopPoll();
+      }
+    }
+
+    function bind() {
+      el.ask.addEventListener("click", askAgent);
+      el.reset.addEventListener("click", () => { resetAll(); el.runId.value = ""; setRun(""); });
+      document.querySelectorAll(".quick").forEach((n) => n.addEventListener("click", () => { el.q.value = n.getAttribute("data-q") || ""; }));
+    }
+
+    async function initFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const runId = String(params.get("run_id") || "").trim();
+      if (!runId) return;
+      setRun(runId); log(`从 URL 载入 run_id=${runId}`);
+      try { await loadRun(runId); } catch (e) { showErr(`载入 run 失败: ${e.message || e}`); }
+    }
+
+    function init() { buildDocChecks(); bind(); resetAll(); initFromUrl(); }
+    init();
+  </script>
+</body>
+</html>

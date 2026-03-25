@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ECG Research Copilot</title>
+  <style>
+    :root {
+      --bg: #0e121b;
+      --bg-soft: #141b2a;
+      --surface: #182133;
+      --surface-2: #202b40;
+      --border: #2c3a55;
+      --text: #dbe6ff;
+      --muted: #9ca9c5;
+      --brand: #1f9d8d;
+      --brand-soft: #2bb6a4;
+      --ok: #4caf76;
+      --warn: #d69d35;
+      --bad: #d46f73;
+      --chip: #22314f;
+      --radius: 14px;
+      --shadow: 0 12px 26px rgba(2, 8, 23, 0.36);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "IBM Plex Sans", "Noto Sans SC", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 500px at 88% -5%, rgba(31, 157, 141, 0.2), transparent 60%),
+        radial-gradient(700px 380px at -8% 18%, rgba(54, 109, 189, 0.18), transparent 66%),
+        linear-gradient(180deg, var(--bg), #0b0f18 72%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 14px 40px;
+    }
+
+    .container {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+    }
+
+    .hero {
+      padding: 22px 20px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: linear-gradient(160deg, rgba(32, 43, 64, 0.95), rgba(22, 31, 49, 0.9));
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+
+    .hero-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .hero h1 {
+      font-size: 1.5rem;
+      letter-spacing: 0.01em;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      background: var(--chip);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.74rem;
+      color: #b7c4de;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 14px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(25, 34, 52, 0.96), rgba(20, 28, 43, 0.96));
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .card-title {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pill {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #1f2c45;
+      color: #c3d2ee;
+      font-size: 0.72rem;
+      padding: 3px 9px;
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .hero-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .worker-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: #1f2c45;
+      padding: 4px 10px;
+      font-size: 0.74rem;
+      color: #cfdbf3;
+    }
+
+    .worker-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--bad);
+      box-shadow: 0 0 0 3px rgba(212, 111, 115, 0.15);
+      transition: background-color .18s ease;
+      flex-shrink: 0;
+    }
+
+    .worker-dot.online {
+      background: var(--ok);
+      box-shadow: 0 0 0 3px rgba(76, 175, 118, 0.15);
+    }
+
+    .worker-dot.unknown {
+      background: #8aa0c7;
+      box-shadow: 0 0 0 3px rgba(138, 160, 199, 0.15);
+    }
+
+    .queue-meta {
+      margin-top: 8px;
+      font-size: 0.74rem;
+      color: #b2c3e2;
+    }
+
+    .row {
+      margin-bottom: 10px;
+    }
+
+    .row:last-child {
+      margin-bottom: 0;
+    }
+
+    .row-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.79rem;
+      color: var(--muted);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: 0.88rem;
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease;
+      font-family: inherit;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--brand-soft);
+      box-shadow: 0 0 0 2px rgba(43, 182, 164, 0.16);
+    }
+
+    textarea {
+      min-height: 88px;
+      resize: vertical;
+      line-height: 1.45;
+    }
+
+    .hint {
+      font-size: 0.73rem;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    .btn {
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      padding: 10px 11px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #e8fcf9;
+      background: linear-gradient(140deg, var(--brand), var(--brand-soft));
+      cursor: pointer;
+      transition: transform .08s ease, filter .15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      filter: brightness(1.06);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+
+    .btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .btn.secondary {
+      background: #2a3e62;
+      color: #d7e4ff;
+      border-color: #3b527d;
+    }
+
+    .btn.inline {
+      width: auto;
+      min-width: 140px;
+      padding: 9px 12px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .status-box {
+      display: none;
+      margin-top: 8px;
+      border: 1px solid #3b507a;
+      border-radius: 8px;
+      background: #1d2a45;
+      color: #bbcae9;
+      padding: 8px 10px;
+      font-size: 0.79rem;
+    }
+
+    .status-box.show {
+      display: block;
+    }
+
+    .status-box.ok {
+      border-color: rgba(76, 175, 118, 0.55);
+      background: rgba(29, 74, 56, 0.48);
+      color: #bfe9cf;
+    }
+
+    .status-box.err {
+      border-color: rgba(212, 111, 115, 0.55);
+      background: rgba(89, 28, 34, 0.5);
+      color: #f5c8cc;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #1d2740;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #d6fff8;
+    }
+
+    .stat-label {
+      font-size: 0.73rem;
+      margin-top: 4px;
+      color: var(--muted);
+    }
+
+    .section-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin: 8px 0 6px;
+    }
+
+    .time-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .time-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1f2a42;
+      padding: 8px 9px;
+      font-size: 0.84rem;
+      color: #d3def7;
+    }
+
+    .time-item span {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.79rem;
+    }
+
+    .table th, .table td {
+      padding: 6px 7px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+
+    .table th {
+      color: #adc0e4;
+      font-weight: 500;
+    }
+
+    .bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bar {
+      height: 6px;
+      border-radius: 3px;
+      min-width: 2px;
+      background: #4c89dc;
+    }
+
+    .bar.ok { background: var(--ok); }
+    .bar.warn { background: var(--warn); }
+    .bar.bad { background: var(--bad); }
+
+    .artifact-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 6px;
+    }
+
+    .artifact {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--border);
+      background: #223252;
+      color: #d9e6ff;
+      border-radius: 8px;
+      padding: 6px 8px;
+      text-decoration: none;
+      font-size: 0.76rem;
+      max-width: 100%;
+    }
+
+    .artifact:hover {
+      border-color: var(--brand-soft);
+      color: #f5fffd;
+    }
+
+    .artifact-tools {
+      display: grid;
+      grid-template-columns: 1fr 140px;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .artifact-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.73rem;
+    }
+
+    .mono {
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+      font-size: 0.77rem;
+      color: #cfdbf5;
+    }
+
+    .panel {
+      border: 1px dashed #39527f;
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: #19243a;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: #c4d2ef;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-size: 0.78rem;
+      margin-top: 6px;
+    }
+
+    .meta-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1f2a42;
+      padding: 8px;
+    }
+
+    .meta-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.7rem;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .run-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .run-item {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #1f2a42;
+      color: #d4e3ff;
+      text-align: left;
+      padding: 8px 9px;
+      font-size: 0.77rem;
+      cursor: pointer;
+    }
+
+    .run-item:hover {
+      border-color: #5c78a8;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.76rem;
+    }
+
+    @media (max-width: 980px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+      .row-grid, .meta-grid, .time-box, .artifact-tools {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="hero-top">
+        <h1>ECG Research Copilot · Workflow Studio</h1>
+        <div class="hero-right">
+          <div class="worker-badge">
+            <span id="workerDot" class="worker-dot unknown"></span>
+            <span id="workerStatusText">Worker: unknown</span>
+          </div>
+          <div class="pill" id="currentRunPill">当前 Run: 未选择</div>
+        </div>
+      </div>
+      <p>统一操作你已实现的链路：创建 Run、build_cohort、ECG 特征任务入队、report 生成、artifacts 与 report 预览。</p>
+      <div class="chips">
+        <span class="chip">/runs</span>
+        <span class="chip">/tools/build_cohort</span>
+        <span class="chip">/tools/extract_ecg_features</span>
+        <span class="chip">/tools/generate_report</span>
+        <span class="chip">/tools/demo_report</span>
+        <a class="chip" href="/ui/agent" style="text-decoration:none;color:#d8fff8;border-color:#3e5f86;background:#284067;">Open Agent QA · /ui/agent</a>
+      </div>
+      <div id="queueMeta" class="queue-meta">队列状态加载中...</div>
+    </section>
+
+    <section class="grid">
+      <div class="stack">
+        <article class="card">
+          <div class="card-title">Quick Action · 一键 Demo Report</div>
+          <div class="row row-grid">
+            <div>
+              <label for="demoRunId">Run ID（可选）</label>
+              <input id="demoRunId" type="text" placeholder="留空自动生成" />
+            </div>
+            <div>
+              <label for="demoSampleN">ECG 样本数</label>
+              <input id="demoSampleN" type="number" min="5" max="50" value="10" />
+            </div>
+          </div>
+          <div class="row">
+            <label for="demoQuestion">Question（可选）</label>
+            <input id="demoQuestion" type="text" placeholder="One-click demo report" />
+          </div>
+          <button id="demoRunBtn" class="btn">一键跑 Demo 链路</button>
+          <div class="hint">会在后台生成 cohort/QC/features/analysis/report 全部产物。</div>
+          <div id="demoStatus" class="status-box"></div>
+          <div id="demoError" class="status-box err"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Step 1 · Build Cohort</div>
+          <div class="row">
+            <label for="templateSelect">Cohort 模板</label>
+            <select id="templateSelect">
+              <option value="electrolyte_hyperkalemia">electrolyte_hyperkalemia · 高钾血症</option>
+              <option value="diagnosis_icd">diagnosis_icd · ICD 诊断</option>
+              <option value="medication_exposure">medication_exposure · 用药暴露</option>
+            </select>
+          </div>
+          <div id="paramsZone"></div>
+          <div class="row">
+            <label for="limitInput">返回行数上限</label>
+            <input id="limitInput" type="number" min="1" max="5000" value="50" />
+          </div>
+          <button id="cohortRunBtn" class="btn">运行 Cohort（自动创建 Run）</button>
+          <div id="cohortStatus" class="status-box"></div>
+          <div id="cohortError" class="status-box err"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Step 2 · Enqueue ECG Features</div>
+          <div class="row">
+            <label for="featureRunId">Run ID</label>
+            <input id="featureRunId" type="text" placeholder="填入已有 run_id" />
+          </div>
+          <div class="row">
+            <label for="featureRecordIds">Record IDs（每行一个，或逗号分隔）</label>
+            <textarea id="featureRecordIds" placeholder="mimic_ecg_...\nmimic_ecg_..."></textarea>
+            <div class="hint">该接口只负责入队，需有 worker 在后台处理。</div>
+          </div>
+          <div class="row">
+            <label for="featureParamsJson">params JSON（可选）</label>
+            <textarea id="featureParamsJson">{}</textarea>
+          </div>
+          <button id="featureEnqueueBtn" class="btn secondary">入队 ECG Features</button>
+          <div id="featureStatus" class="status-box"></div>
+          <div id="featureError" class="status-box err"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Step 3 · Generate Report</div>
+          <div class="row">
+            <label for="reportRunId">Run ID</label>
+            <input id="reportRunId" type="text" placeholder="填入已有 run_id" />
+          </div>
+          <div class="row">
+            <label for="reportQuestion">question（可选，覆盖 params.json 里的 question）</label>
+            <input id="reportQuestion" type="text" placeholder="可留空" />
+          </div>
+          <div class="row">
+            <label for="reportQcPath">qc_parquet（可选，绝对路径）</label>
+            <input id="reportQcPath" type="text" placeholder="可留空" />
+          </div>
+          <div class="row">
+            <label for="reportParamsJson">config.params JSON（可选）</label>
+            <textarea id="reportParamsJson">{}</textarea>
+          </div>
+          <button id="reportEnqueueBtn" class="btn secondary">生成 Report（后台任务）</button>
+          <div id="reportStatus" class="status-box"></div>
+          <div id="reportError" class="status-box err"></div>
+        </article>
+      </div>
+
+      <div class="stack">
+        <article class="card">
+          <div class="title-row">
+            <div class="card-title" style="margin-bottom: 0;">Run 监控台</div>
+            <label style="display:flex;align-items:center;gap:6px;color:var(--muted);font-size:0.74rem;margin:0;">
+              <input id="autoPoll" type="checkbox" style="width:auto;" />
+              自动轮询
+            </label>
+          </div>
+          <div class="row row-grid">
+            <div>
+              <label for="monitorRunId">Run ID</label>
+              <input id="monitorRunId" type="text" placeholder="输入 run_id 并刷新" />
+            </div>
+            <div>
+              <label>&nbsp;</label>
+              <div class="actions">
+                <button id="refreshRunBtn" class="btn inline secondary">刷新 Run</button>
+                <button id="refreshRunsBtn" class="btn inline secondary">最近 Runs</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="meta-grid" id="runMetaGrid">
+            <div class="meta-item"><span>Status</span><div id="runStatusText">—</div></div>
+            <div class="meta-item"><span>Created At</span><div id="runCreatedText">—</div></div>
+            <div class="meta-item"><span>Question</span><div id="runQuestionText">—</div></div>
+            <div class="meta-item"><span>Artifacts Path</span><div id="runPathText" class="mono">—</div></div>
+          </div>
+
+          <div class="section-label">任务结果</div>
+          <div id="taskResultPanel" class="panel">暂无任务结果。</div>
+
+          <div class="section-label">最近 Runs</div>
+          <div id="recentRuns" class="run-list">
+            <div class="muted">点击“最近 Runs”加载。</div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-title">Cohort 摘要与 Artifacts</div>
+
+          <div class="summary-grid">
+            <div class="stat">
+              <div id="sSubjects" class="stat-value">—</div>
+              <div class="stat-label">distinct_subjects</div>
+            </div>
+            <div class="stat">
+              <div id="sTotalRows" class="stat-value">—</div>
+              <div class="stat-label">total_rows</div>
+            </div>
+            <div class="stat">
+              <div id="sRunId" class="stat-value mono">—</div>
+              <div class="stat-label">run_id</div>
+            </div>
+          </div>
+
+          <div class="section-label">Index Time 范围</div>
+          <div class="time-box">
+            <div class="time-item"><span>最早</span><strong id="sTimeMin">—</strong></div>
+            <div class="time-item"><span>最晚</span><strong id="sTimeMax">—</strong></div>
+          </div>
+
+          <div class="section-label">关键变量缺失率</div>
+          <table class="table">
+            <thead><tr><th>字段</th><th>缺失率</th><th></th></tr></thead>
+            <tbody id="sMissingBody"><tr><td colspan="3" class="muted">暂无数据</td></tr></tbody>
+          </table>
+
+          <div class="section-label">Artifacts</div>
+          <div class="artifact-tools">
+            <input id="artifactSearch" type="text" placeholder="搜索 artifact 名称（如 report / parquet）" />
+            <select id="artifactType">
+              <option value="all">全部类型</option>
+              <option value="json">JSON</option>
+              <option value="parquet">Parquet</option>
+              <option value="plot">Plot 图片</option>
+              <option value="report">Report 相关</option>
+            </select>
+          </div>
+          <div class="actions">
+            <button id="openReportBtn" class="btn inline secondary">打开 report.md</button>
+            <button id="openMetaBtn" class="btn inline secondary">打开 run_metadata.json</button>
+            <button id="openReportTaskBtn" class="btn inline secondary">打开 report_task_result</button>
+            <button id="openFeatureTaskBtn" class="btn inline secondary">打开 ecg_feature_task_result</button>
+          </div>
+          <div id="artifactCount" class="artifact-meta">0 / 0 个 artifacts</div>
+          <div id="artifactList" class="artifact-list"></div>
+
+          <div class="section-label">Report 预览（report.md）</div>
+          <div id="reportPreview" class="panel">暂无 report.md。</div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const API = "";
+    let currentRunId = "";
+    let autoPollTimer = null;
+    let currentArtifacts = [];
+
+    const TEMPLATES = {
+      electrolyte_hyperkalemia: [
+        { key: "k_threshold", label: "K 阈值 (mmol/L)", type: "number", default: "5.5", hint: ">= 此值算高钾" },
+        { key: "label_keyword", label: "Lab 关键词", type: "text", default: "potassium", hint: "不区分大小写，模糊匹配" },
+        { key: "charttime_start", label: "ChartTime 开始", type: "date", default: "" },
+        { key: "charttime_end", label: "ChartTime 结束", type: "date", default: "" }
+      ],
+      diagnosis_icd: [
+        { key: "icd_codes", label: "ICD 代码（逗号分隔）", type: "text", default: "", hint: "精确匹配，如 E875,E876" },
+        { key: "icd_prefixes", label: "ICD 前缀（逗号分隔）", type: "text", default: "", hint: "前缀匹配，如 E87" },
+        { key: "icd_version", label: "ICD 版本（9 或 10）", type: "number", default: "" },
+        { key: "admittime_start", label: "AdmitTime 开始", type: "date", default: "" },
+        { key: "admittime_end", label: "AdmitTime 结束", type: "date", default: "" }
+      ],
+      medication_exposure: [
+        { key: "source", label: "数据源", type: "select", options: ["prescriptions", "pharmacy"], default: "prescriptions" },
+        { key: "drug_names", label: "药名（逗号分隔）", type: "text", default: "", hint: "精确匹配" },
+        { key: "drug_keywords", label: "药名关键词（逗号分隔）", type: "text", default: "", hint: "模糊匹配" },
+        { key: "starttime_start", label: "StartTime 开始", type: "date", default: "" },
+        { key: "starttime_end", label: "StartTime 结束", type: "date", default: "" }
+      ]
+    };
+
+    const el = {
+      workerDot: document.getElementById("workerDot"),
+      workerStatusText: document.getElementById("workerStatusText"),
+      queueMeta: document.getElementById("queueMeta"),
+      templateSelect: document.getElementById("templateSelect"),
+      paramsZone: document.getElementById("paramsZone"),
+      limitInput: document.getElementById("limitInput"),
+      cohortRunBtn: document.getElementById("cohortRunBtn"),
+      cohortStatus: document.getElementById("cohortStatus"),
+      cohortError: document.getElementById("cohortError"),
+      currentRunPill: document.getElementById("currentRunPill"),
+      demoRunId: document.getElementById("demoRunId"),
+      demoSampleN: document.getElementById("demoSampleN"),
+      demoQuestion: document.getElementById("demoQuestion"),
+      demoRunBtn: document.getElementById("demoRunBtn"),
+      demoStatus: document.getElementById("demoStatus"),
+      demoError: document.getElementById("demoError"),
+      featureRunId: document.getElementById("featureRunId"),
+      featureRecordIds: document.getElementById("featureRecordIds"),
+      featureParamsJson: document.getElementById("featureParamsJson"),
+      featureEnqueueBtn: document.getElementById("featureEnqueueBtn"),
+      featureStatus: document.getElementById("featureStatus"),
+      featureError: document.getElementById("featureError"),
+      reportRunId: document.getElementById("reportRunId"),
+      reportQuestion: document.getElementById("reportQuestion"),
+      reportQcPath: document.getElementById("reportQcPath"),
+      reportParamsJson: document.getElementById("reportParamsJson"),
+      reportEnqueueBtn: document.getElementById("reportEnqueueBtn"),
+      reportStatus: document.getElementById("reportStatus"),
+      reportError: document.getElementById("reportError"),
+      monitorRunId: document.getElementById("monitorRunId"),
+      refreshRunBtn: document.getElementById("refreshRunBtn"),
+      refreshRunsBtn: document.getElementById("refreshRunsBtn"),
+      autoPoll: document.getElementById("autoPoll"),
+      runStatusText: document.getElementById("runStatusText"),
+      runCreatedText: document.getElementById("runCreatedText"),
+      runQuestionText: document.getElementById("runQuestionText"),
+      runPathText: document.getElementById("runPathText"),
+      taskResultPanel: document.getElementById("taskResultPanel"),
+      recentRuns: document.getElementById("recentRuns"),
+      sSubjects: document.getElementById("sSubjects"),
+      sTotalRows: document.getElementById("sTotalRows"),
+      sRunId: document.getElementById("sRunId"),
+      sTimeMin: document.getElementById("sTimeMin"),
+      sTimeMax: document.getElementById("sTimeMax"),
+      sMissingBody: document.getElementById("sMissingBody"),
+      artifactList: document.getElementById("artifactList"),
+      reportPreview: document.getElementById("reportPreview"),
+      artifactSearch: document.getElementById("artifactSearch"),
+      artifactType: document.getElementById("artifactType"),
+      artifactCount: document.getElementById("artifactCount"),
+      openReportBtn: document.getElementById("openReportBtn"),
+      openMetaBtn: document.getElementById("openMetaBtn"),
+      openReportTaskBtn: document.getElementById("openReportTaskBtn"),
+      openFeatureTaskBtn: document.getElementById("openFeatureTaskBtn")
+    };
+
+    function setBox(node, message, type = "normal") {
+      node.textContent = message;
+      node.className = "status-box show";
+      if (type === "ok") node.classList.add("ok");
+      if (type === "err") node.classList.add("err");
+    }
+
+    function hideBox(node) {
+      node.className = "status-box";
+      node.textContent = "";
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function shortRun(runId) {
+      if (!runId) return "—";
+      return runId.length > 12 ? runId.slice(0, 8) + "..." : runId;
+    }
+
+    function fmtTime(ts) {
+      if (!ts || ts === "None" || ts === "NaT") return "—";
+      try {
+        return new Date(ts).toLocaleString("zh-CN", { hour12: false });
+      } catch (_) {
+        return String(ts);
+      }
+    }
+
+    function fmtSize(bytes) {
+      const n = Number(bytes || 0);
+      if (n < 1024) return n + " B";
+      if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+      return (n / (1024 * 1024)).toFixed(2) + " MB";
+    }
+
+    function artifactUrl(runId, artifactName) {
+      const encPath = String(artifactName)
+        .split("/")
+        .map((s) => encodeURIComponent(s))
+        .join("/");
+      return `${API}/runs/${encodeURIComponent(runId)}/artifact/${encPath}`;
+    }
+
+    async function apiJson(url, options = {}) {
+      const resp = await fetch(url, options);
+      const text = await resp.text();
+      let payload = null;
+      try {
+        payload = text ? JSON.parse(text) : {};
+      } catch (_) {
+        payload = text;
+      }
+      if (!resp.ok) {
+        const detail = payload && payload.detail ? payload.detail : `${resp.status} ${resp.statusText}`;
+        throw new Error(String(detail));
+      }
+      return payload;
+    }
+
+    function syncRunId(runId) {
+      currentRunId = runId;
+      el.currentRunPill.textContent = "当前 Run: " + runId;
+      el.featureRunId.value = runId;
+      el.reportRunId.value = runId;
+      el.monitorRunId.value = runId;
+      el.sRunId.textContent = shortRun(runId);
+      el.sRunId.title = runId;
+    }
+
+    function fieldEl(d) {
+      const wrap = document.createElement("div");
+      const label = document.createElement("label");
+      label.htmlFor = "p_" + d.key;
+      label.textContent = d.label;
+      wrap.appendChild(label);
+
+      let input = null;
+      if (d.type === "select") {
+        input = document.createElement("select");
+        (d.options || []).forEach((op) => {
+          const o = document.createElement("option");
+          o.value = op;
+          o.textContent = op;
+          if (op === d.default) o.selected = true;
+          input.appendChild(o);
+        });
+      } else {
+        input = document.createElement("input");
+        input.type = d.type;
+        if (d.default) input.value = d.default;
+        if (d.type === "number") input.step = "any";
+      }
+      input.id = "p_" + d.key;
+      wrap.appendChild(input);
+
+      if (d.hint) {
+        const h = document.createElement("div");
+        h.className = "hint";
+        h.textContent = d.hint;
+        wrap.appendChild(h);
+      }
+      return wrap;
+    }
+
+    function renderParams(templateName) {
+      const defs = TEMPLATES[templateName] || [];
+      el.paramsZone.innerHTML = "";
+      let i = 0;
+      while (i < defs.length) {
+        const d = defs[i];
+        if (d.type === "date" && i + 1 < defs.length && defs[i + 1].type === "date") {
+          const row = document.createElement("div");
+          row.className = "row row-grid";
+          row.appendChild(fieldEl(defs[i]));
+          row.appendChild(fieldEl(defs[i + 1]));
+          el.paramsZone.appendChild(row);
+          i += 2;
+        } else {
+          const row = document.createElement("div");
+          row.className = "row";
+          row.appendChild(fieldEl(d));
+          el.paramsZone.appendChild(row);
+          i += 1;
+        }
+      }
+    }
+
+    function collectParams(templateName) {
+      const defs = TEMPLATES[templateName] || [];
+      const out = {};
+      defs.forEach((d) => {
+        const node = document.getElementById("p_" + d.key);
+        if (!node) return;
+        const raw = String(node.value || "").trim();
+        if (!raw) return;
+        const listKey =
+          d.key.endsWith("_codes") ||
+          d.key.endsWith("_prefixes") ||
+          d.key.endsWith("_names") ||
+          d.key.endsWith("_keywords");
+        if (listKey) {
+          const arr = raw.split(",").map((x) => x.trim()).filter(Boolean);
+          if (arr.length) out[d.key] = arr;
+          return;
+        }
+        if (d.type === "number") {
+          out[d.key] = Number(raw);
+          return;
+        }
+        out[d.key] = raw;
+      });
+      return out;
+    }
+
+    function parseRecordIds(rawText) {
+      const ids = String(rawText || "")
+        .split(/[\n,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      return [...new Set(ids)];
+    }
+
+    function parseJsonText(raw, fieldName) {
+      const text = String(raw || "").trim();
+      if (!text) return {};
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+        throw new Error(fieldName + " 必须是 JSON 对象");
+      } catch (err) {
+        throw new Error(fieldName + " 解析失败: " + err.message);
+      }
+    }
+
+    async function refreshWorkerStatus() {
+      try {
+        const data = await apiJson(`${API}/tools/worker_status`);
+        const worker = data.ecg_worker || {};
+        const queues = data.queues || {};
+        const ecgQueue = queues.ecg_features || {};
+        const reportQueue = queues.report || {};
+
+        const online = !!worker.online;
+        const state = worker.state || "unknown";
+        const age = worker.age_seconds;
+
+        el.workerDot.className = "worker-dot " + (online ? "online" : (state === "unknown" ? "unknown" : ""));
+        const ageText = (typeof age === "number") ? `, ${Math.floor(age)}s ago` : "";
+        el.workerStatusText.textContent = `Worker: ${online ? "online" : "offline"} (${state}${ageText})`;
+        el.queueMeta.textContent =
+          `ECG queue pending/running: ${ecgQueue.pending || 0}/${ecgQueue.running || 0}, ` +
+          `Report queue pending/running: ${reportQueue.pending || 0}/${reportQueue.running || 0}`;
+      } catch (err) {
+        el.workerDot.className = "worker-dot";
+        el.workerStatusText.textContent = "Worker: status unavailable";
+        el.queueMeta.textContent = "队列状态读取失败: " + (err.message || String(err));
+      }
+    }
+
+    async function runDemoReport() {
+      hideBox(el.demoError);
+      el.demoRunBtn.disabled = true;
+      try {
+        const runIdRaw = String(el.demoRunId.value || "").trim();
+        const sampleN = Number(el.demoSampleN.value || 10);
+        const question = String(el.demoQuestion.value || "").trim();
+        if (!Number.isFinite(sampleN) || sampleN < 5 || sampleN > 50) {
+          throw new Error("ECG 样本数需在 5-50 之间");
+        }
+        setBox(el.demoStatus, "提交 demo_report 任务 ...");
+
+        const body = {
+          sample_n: sampleN,
+          config: {}
+        };
+        if (runIdRaw) body.run_id = runIdRaw;
+        if (question) body.question = question;
+
+        const resp = await apiJson(`${API}/tools/demo_report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const runId = String(resp.run_id || "");
+        syncRunId(runId);
+        el.demoRunId.value = runId;
+        setBox(
+          el.demoStatus,
+          `已提交: run_id=${runId}, job_id=${resp.job_id}, queued_at=${fmtTime(resp.queued_at)}`,
+          "ok"
+        );
+        await refreshRunMonitor(runId);
+        await loadRecentRuns();
+      } catch (err) {
+        setBox(el.demoError, err.message || String(err), "err");
+      } finally {
+        el.demoRunBtn.disabled = false;
+      }
+    }
+
+    async function runCohortFlow() {
+      hideBox(el.cohortError);
+      el.cohortRunBtn.disabled = true;
+      try {
+        const templateName = el.templateSelect.value;
+        const params = collectParams(templateName);
+        const limit = Number(el.limitInput.value || 50);
+
+        setBox(el.cohortStatus, "创建 Run ...");
+        const runData = await apiJson(`${API}/runs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: "UI workflow: " + templateName,
+            params
+          })
+        });
+
+        const runId = String(runData.run_id || "");
+        syncRunId(runId);
+        setBox(el.cohortStatus, "执行 build_cohort ...");
+
+        const cohortResp = await apiJson(`${API}/tools/build_cohort`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            template_name: templateName,
+            params,
+            run_id: runId,
+            limit
+          })
+        });
+
+        const [summary, artifacts] = await Promise.all([
+          fetchRunSummary(runId),
+          fetchRunArtifacts(runId)
+        ]);
+        renderCohortSummary(runId, summary, cohortResp, artifacts);
+        setBox(el.cohortStatus, "完成：row_count=" + (cohortResp.row_count || 0), "ok");
+        await refreshRunMonitor(runId);
+        await loadRecentRuns();
+      } catch (err) {
+        setBox(el.cohortError, err.message || String(err), "err");
+      } finally {
+        el.cohortRunBtn.disabled = false;
+      }
+    }
+
+    async function enqueueFeatureJob() {
+      hideBox(el.featureError);
+      el.featureEnqueueBtn.disabled = true;
+      try {
+        const runId = String(el.featureRunId.value || "").trim();
+        if (!runId) throw new Error("请输入 run_id");
+        const ids = parseRecordIds(el.featureRecordIds.value);
+        if (!ids.length) throw new Error("请至少提供一个 record_id");
+        const params = parseJsonText(el.featureParamsJson.value, "Feature params JSON");
+
+        setBox(el.featureStatus, "提交 ECG features 队列 ...");
+        const resp = await apiJson(`${API}/tools/extract_ecg_features`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            run_id: runId,
+            record_ids: ids,
+            params
+          })
+        });
+        syncRunId(runId);
+        setBox(
+          el.featureStatus,
+          `已入队: job_id=${resp.job_id}, queued_at=${fmtTime(resp.queued_at)}`,
+          "ok"
+        );
+        await refreshRunMonitor(runId);
+      } catch (err) {
+        setBox(el.featureError, err.message || String(err), "err");
+      } finally {
+        el.featureEnqueueBtn.disabled = false;
+      }
+    }
+
+    async function enqueueReportJob() {
+      hideBox(el.reportError);
+      el.reportEnqueueBtn.disabled = true;
+      try {
+        const runId = String(el.reportRunId.value || "").trim();
+        if (!runId) throw new Error("请输入 run_id");
+        const question = String(el.reportQuestion.value || "").trim();
+        const qcPath = String(el.reportQcPath.value || "").trim();
+        const params = parseJsonText(el.reportParamsJson.value, "Report params JSON");
+
+        const config = {};
+        if (question) config.question = question;
+        if (qcPath) config.qc_parquet = qcPath;
+        if (Object.keys(params).length > 0) config.params = params;
+
+        setBox(el.reportStatus, "提交 report 生成任务 ...");
+        const resp = await apiJson(`${API}/tools/generate_report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            run_id: runId,
+            config
+          })
+        });
+        syncRunId(runId);
+        setBox(
+          el.reportStatus,
+          `已提交: job_id=${resp.job_id}, queued_at=${fmtTime(resp.queued_at)}`,
+          "ok"
+        );
+        await refreshRunMonitor(runId);
+      } catch (err) {
+        setBox(el.reportError, err.message || String(err), "err");
+      } finally {
+        el.reportEnqueueBtn.disabled = false;
+      }
+    }
+
+    async function fetchRunSummary(runId) {
+      try {
+        return await apiJson(`${API}/runs/${encodeURIComponent(runId)}/summary`);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function fetchRunArtifacts(runId) {
+      try {
+        return await apiJson(`${API}/runs/${encodeURIComponent(runId)}/artifacts`);
+      } catch (_) {
+        return [];
+      }
+    }
+
+    async function fetchArtifactText(runId, pathName) {
+      const resp = await fetch(artifactUrl(runId, pathName));
+      if (!resp.ok) throw new Error(`读取 artifact 失败: ${pathName}`);
+      return await resp.text();
+    }
+
+    async function fetchArtifactJson(runId, pathName) {
+      const txt = await fetchArtifactText(runId, pathName);
+      return JSON.parse(txt);
+    }
+
+    function artifactExists(artifacts, pathName) {
+      return artifacts.some((x) => x.name === pathName);
+    }
+
+    function artifactTypeMatches(name, kind) {
+      if (kind === "all") return true;
+      const lower = name.toLowerCase();
+      if (kind === "json") return lower.endsWith(".json");
+      if (kind === "parquet") return lower.endsWith(".parquet");
+      if (kind === "plot") return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".svg");
+      if (kind === "report") return lower.includes("report");
+      return true;
+    }
+
+    function renderCohortSummary(runId, summary, cohortResp, artifacts) {
+      const subjects = summary && summary.distinct_subjects != null ? summary.distinct_subjects : "—";
+      const totalRows = summary && summary.total_rows != null
+        ? summary.total_rows
+        : (cohortResp && cohortResp.row_count != null ? cohortResp.row_count : "—");
+      el.sSubjects.textContent = String(subjects);
+      el.sTotalRows.textContent = String(totalRows);
+      el.sRunId.textContent = shortRun(runId);
+      el.sRunId.title = runId;
+
+      if (summary && summary.index_time_range) {
+        el.sTimeMin.textContent = fmtTime(summary.index_time_range.min);
+        el.sTimeMax.textContent = fmtTime(summary.index_time_range.max);
+      } else {
+        el.sTimeMin.textContent = "—";
+        el.sTimeMax.textContent = "—";
+      }
+
+      const rates = (summary && summary.missing_rates) ? summary.missing_rates : {};
+      const keys = Object.keys(rates);
+      if (!keys.length) {
+        el.sMissingBody.innerHTML = '<tr><td colspan="3" class="muted">暂无缺失率数据</td></tr>';
+      } else {
+        el.sMissingBody.innerHTML = keys.map((key) => {
+          const rate = Number(rates[key] || 0);
+          const pct = (rate * 100).toFixed(1) + "%";
+          let cls = "";
+          if (rate === 0) cls = "ok";
+          else if (rate >= 0.1 && rate < 0.3) cls = "warn";
+          else if (rate >= 0.3) cls = "bad";
+          return `
+            <tr>
+              <td>${escapeHtml(key)}</td>
+              <td>${pct}</td>
+              <td>
+                <div class="bar-wrap">
+                  <div class="bar ${cls}" style="width:${Math.max(2, rate * 130)}px"></div>
+                  <span class="muted">${pct}</span>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+      renderArtifacts(runId, artifacts);
+    }
+
+    function renderArtifacts(runId, artifacts) {
+      currentArtifacts = Array.isArray(artifacts) ? artifacts.slice() : [];
+      const search = String(el.artifactSearch.value || "").trim().toLowerCase();
+      const kind = String(el.artifactType.value || "all");
+      const filtered = currentArtifacts.filter((a) => {
+        const name = String(a.name || "");
+        if (search && !name.toLowerCase().includes(search)) return false;
+        if (!artifactTypeMatches(name, kind)) return false;
+        return true;
+      });
+
+      el.artifactCount.textContent = `${filtered.length} / ${currentArtifacts.length} 个 artifacts`;
+
+      if (!filtered.length) {
+        el.artifactList.innerHTML = '<span class="muted">暂无 artifacts</span>';
+        return;
+      }
+      el.artifactList.innerHTML = filtered.map((a) => {
+        return `
+          <a class="artifact" target="_blank" rel="noopener" href="${artifactUrl(runId, a.name)}">
+            ↗ ${escapeHtml(a.name)} (${fmtSize(a.size_bytes)})
+          </a>
+        `;
+      }).join("");
+    }
+
+    function openArtifactByName(pathName) {
+      const rid = String(currentRunId || el.monitorRunId.value || "").trim();
+      if (!rid) {
+        el.reportPreview.textContent = "请先选择或输入 run_id。";
+        return;
+      }
+      if (!artifactExists(currentArtifacts, pathName)) {
+        el.reportPreview.textContent = `当前 run 不存在 artifact: ${pathName}`;
+        return;
+      }
+      window.open(artifactUrl(rid, pathName), "_blank", "noopener");
+    }
+
+    async function refreshRunMonitor(runId) {
+      const targetRunId = String(runId || el.monitorRunId.value || "").trim();
+      if (!targetRunId) return;
+      el.monitorRunId.value = targetRunId;
+      syncRunId(targetRunId);
+      el.runStatusText.textContent = "加载中 ...";
+      try {
+        const [runData, artifacts] = await Promise.all([
+          apiJson(`${API}/runs/${encodeURIComponent(targetRunId)}`),
+          fetchRunArtifacts(targetRunId)
+        ]);
+
+        el.runStatusText.textContent = runData.status || "—";
+        el.runCreatedText.textContent = fmtTime(runData.created_at);
+        el.runQuestionText.textContent = runData.question || "—";
+        el.runPathText.textContent = runData.artifacts_path || "—";
+
+        const summary = await fetchRunSummary(targetRunId);
+        renderCohortSummary(targetRunId, summary, null, artifacts);
+        await renderTaskResults(targetRunId, artifacts);
+        await renderReportPreview(targetRunId, artifacts);
+      } catch (err) {
+        el.runStatusText.textContent = "读取失败";
+        el.taskResultPanel.textContent = "错误: " + (err.message || String(err));
+      }
+    }
+
+    async function renderTaskResults(runId, artifacts) {
+      const lines = [];
+      lines.push("run_id: " + runId);
+
+      if (artifactExists(artifacts, "ecg_feature_task_result.json")) {
+        try {
+          const ecgTask = await fetchArtifactJson(runId, "ecg_feature_task_result.json");
+          lines.push("");
+          lines.push("[ecg_feature_task_result]");
+          lines.push("status: " + (ecgTask.status || "unknown"));
+          if (ecgTask.started_at) lines.push("started_at: " + ecgTask.started_at);
+          if (ecgTask.finished_at) lines.push("finished_at: " + ecgTask.finished_at);
+          if (ecgTask.error) lines.push("error: " + ecgTask.error);
+        } catch (err) {
+          lines.push("");
+          lines.push("[ecg_feature_task_result] 读取失败: " + err.message);
+        }
+      } else {
+        lines.push("");
+        lines.push("[ecg_feature_task_result] not found");
+      }
+
+      if (artifactExists(artifacts, "report_task_result.json")) {
+        try {
+          const reportTask = await fetchArtifactJson(runId, "report_task_result.json");
+          lines.push("");
+          lines.push("[report_task_result]");
+          lines.push("status: " + (reportTask.status || "unknown"));
+          if (reportTask.report_path) lines.push("report_path: " + reportTask.report_path);
+          if (reportTask.error) lines.push("error: " + reportTask.error);
+        } catch (err) {
+          lines.push("");
+          lines.push("[report_task_result] 读取失败: " + err.message);
+        }
+      } else {
+        lines.push("");
+        lines.push("[report_task_result] not found");
+      }
+
+      if (artifactExists(artifacts, "run_metadata.json")) {
+        try {
+          const meta = await fetchArtifactJson(runId, "run_metadata.json");
+          lines.push("");
+          lines.push("[run_metadata]");
+          lines.push("pipeline_name: " + (meta.pipeline_name || "—"));
+          lines.push("status: " + (meta.status || "—"));
+          lines.push("warnings: " + ((meta.warnings || []).length || 0));
+        } catch (err) {
+          lines.push("");
+          lines.push("[run_metadata] 读取失败: " + err.message);
+        }
+      } else {
+        lines.push("");
+        lines.push("[run_metadata] not found");
+      }
+
+      el.taskResultPanel.textContent = lines.join("\n");
+    }
+
+    async function renderReportPreview(runId, artifacts) {
+      if (!artifactExists(artifacts, "report.md")) {
+        el.reportPreview.textContent = "暂无 report.md。";
+        return;
+      }
+      try {
+        const text = await fetchArtifactText(runId, "report.md");
+        const sliced = text.length > 1800 ? text.slice(0, 1800) + "\n\n... (truncated)" : text;
+        const link = artifactUrl(runId, "report.md");
+        el.reportPreview.textContent = sliced + "\n\nOpen: " + link;
+      } catch (err) {
+        el.reportPreview.textContent = "report.md 读取失败: " + err.message;
+      }
+    }
+
+    async function loadRecentRuns() {
+      try {
+        const runs = await apiJson(`${API}/runs?limit=12&offset=0`);
+        if (!Array.isArray(runs) || runs.length === 0) {
+          el.recentRuns.innerHTML = '<div class="muted">暂无 runs</div>';
+          return;
+        }
+        el.recentRuns.innerHTML = runs.map((r) => {
+          const runId = String(r.run_id || "");
+          const title = `${shortRun(runId)} · ${r.status || "UNKNOWN"}`;
+          const meta = fmtTime(r.created_at);
+          return `<button class="run-item" data-run-id="${runId}">
+            <div>${escapeHtml(title)}</div>
+            <div class="muted">${escapeHtml(meta)}</div>
+          </button>`;
+        }).join("");
+
+        Array.from(el.recentRuns.querySelectorAll(".run-item")).forEach((node) => {
+          node.addEventListener("click", async () => {
+            const runId = node.getAttribute("data-run-id") || "";
+            if (!runId) return;
+            await refreshRunMonitor(runId);
+          });
+        });
+      } catch (err) {
+        el.recentRuns.innerHTML = `<div class="muted">读取失败: ${escapeHtml(err.message || String(err))}</div>`;
+      }
+    }
+
+    function setAutoPoll(enabled) {
+      if (autoPollTimer) {
+        clearInterval(autoPollTimer);
+        autoPollTimer = null;
+      }
+      if (!enabled) return;
+      autoPollTimer = setInterval(async () => {
+        const runId = String(el.monitorRunId.value || currentRunId || "").trim();
+        if (!runId) return;
+        await refreshRunMonitor(runId);
+      }, 5000);
+    }
+
+    function bindEvents() {
+      el.templateSelect.addEventListener("change", () => {
+        renderParams(el.templateSelect.value);
+      });
+      el.demoRunBtn.addEventListener("click", runDemoReport);
+      el.cohortRunBtn.addEventListener("click", runCohortFlow);
+      el.featureEnqueueBtn.addEventListener("click", enqueueFeatureJob);
+      el.reportEnqueueBtn.addEventListener("click", enqueueReportJob);
+      el.refreshRunBtn.addEventListener("click", async () => {
+        await refreshRunMonitor(el.monitorRunId.value);
+      });
+      el.refreshRunsBtn.addEventListener("click", loadRecentRuns);
+      el.autoPoll.addEventListener("change", () => {
+        setAutoPoll(el.autoPoll.checked);
+      });
+      el.artifactSearch.addEventListener("input", () => {
+        renderArtifacts(currentRunId, currentArtifacts);
+      });
+      el.artifactType.addEventListener("change", () => {
+        renderArtifacts(currentRunId, currentArtifacts);
+      });
+      el.openReportBtn.addEventListener("click", () => openArtifactByName("report.md"));
+      el.openMetaBtn.addEventListener("click", () => openArtifactByName("run_metadata.json"));
+      el.openReportTaskBtn.addEventListener("click", () => openArtifactByName("report_task_result.json"));
+      el.openFeatureTaskBtn.addEventListener("click", () => openArtifactByName("ecg_feature_task_result.json"));
+    }
+
+    async function init() {
+      bindEvents();
+      renderParams(el.templateSelect.value);
+      await refreshWorkerStatus();
+      setInterval(refreshWorkerStatus, 5000);
+      await loadRecentRuns();
+    }
+
+    init();
+  </script>
+</body>
+</html>
+

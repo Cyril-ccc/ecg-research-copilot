@@ -1,0 +1,246 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    name: pytest
+    runs-on: ubuntu-latest
+
+    env:
+      APP_INIT_DB_ON_STARTUP: "0"
+
+    defaults:
+      run:
+        working-directory: services/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies (incl. dev)
+        run: uv sync --group dev
+
+      - name: Run tests
+        run: uv run pytest -q --tb=short
+
+  eval-smoke:
+    name: eval smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EVAL_SMOKE_N: "2"
+      EVAL_SMOKE_MAX_RECORDS: "20"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+
+      - name: Install dependencies (incl. dev)
+        working-directory: services/api
+        run: uv sync --group dev
+
+      - name: Fetch public demo data
+        run: python scripts/fetch_demo_data.py --data-dir "$PWD/data"
+
+      - name: Start services
+        run: docker compose up -d --build db redis api worker
+
+      - name: Wait for db
+        run: |
+          for i in {1..60}; do
+            if docker compose exec -T db pg_isready -U ecg -d ecg; then
+              echo "db ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "db did not become ready in time"
+          exit 1
+
+      - name: Import demo data
+        run: |
+          docker compose run --rm -T \
+            -v "$PWD":/workspace \
+            -w /workspace/services/api \
+            api uv run python /workspace/scripts/import_data.py \
+            --database-url postgresql+psycopg://ecg:ecg@db:5432/ecg \
+            --clinical-root /workspace/data/mimic-iv-clinical-database-demo-2.2 \
+            --ecg-root /workspace/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1 \
+            --schema mimiciv
+
+      - name: Wait for API health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+              echo "api ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "api health check timed out"
+          exit 1
+
+      - name: Run smoke eval
+        id: eval_smoke
+        continue-on-error: true
+        run: make eval_smoke
+
+      - name: Generate eval summary
+        if: always()
+        run: |
+          python evals/write_eval_summary.py \
+            --summary-json eval_runs/summary_smoke.json \
+            --output eval_summary.md \
+            --github-annotations \
+            --github-step-summary
+
+      - name: Collect compose logs
+        if: always()
+        run: docker compose logs --no-color > docker-compose.log
+
+      - name: Upload eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-smoke-artifacts
+          if-no-files-found: warn
+          path: |
+            eval_summary.md
+            eval_runs/summary_smoke.json
+            eval_runs
+            docker-compose.log
+
+      - name: Shutdown services
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+      - name: Fail if smoke eval failed
+        if: steps.eval_smoke.outcome != 'success'
+        run: |
+          echo "Smoke eval failed. See eval_summary.md and GitHub annotations for failed gold IDs."
+          exit 1
+  agent-eval-smoke:
+    name: agent eval smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      AGENT_EVAL_SMOKE_N: "5"
+      AGENT_EVAL_SMOKE_MAX_RECORDS: "20"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+
+      - name: Install dependencies (incl. dev)
+        working-directory: services/api
+        run: uv sync --group dev
+
+      - name: Fetch public demo data
+        run: python scripts/fetch_demo_data.py --data-dir "$PWD/data"
+
+      - name: Start services
+        run: docker compose up -d --build db redis api worker
+
+      - name: Wait for db
+        run: |
+          for i in {1..60}; do
+            if docker compose exec -T db pg_isready -U ecg -d ecg; then
+              echo "db ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "db did not become ready in time"
+          exit 1
+
+      - name: Import demo data
+        run: |
+          docker compose run --rm -T \
+            -v "$PWD":/workspace \
+            -w /workspace/services/api \
+            api uv run python /workspace/scripts/import_data.py \
+            --database-url postgresql+psycopg://ecg:ecg@db:5432/ecg \
+            --clinical-root /workspace/data/mimic-iv-clinical-database-demo-2.2 \
+            --ecg-root /workspace/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1 \
+            --schema mimiciv
+
+      - name: Wait for API health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/health >/dev/null; then
+              echo "api ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "api health check timed out"
+          exit 1
+
+      - name: Run agent smoke eval
+        id: eval_agent_smoke
+        continue-on-error: true
+        run: make eval_agent_smoke
+
+      - name: Generate agent eval summary
+        if: always()
+        run: |
+          python evals/write_eval_summary.py \
+            --summary-json eval_runs/agent_summary_smoke.json \
+            --output eval_agent_summary.md \
+            --github-annotations \
+            --github-step-summary
+
+      - name: Collect compose logs
+        if: always()
+        run: docker compose logs --no-color > docker-compose-agent.log
+
+      - name: Upload agent eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-smoke-artifacts
+          if-no-files-found: warn
+          path: |
+            eval_agent_summary.md
+            eval_runs/agent_summary_smoke.json
+            eval_runs/agent
+            docker-compose-agent.log
+
+      - name: Shutdown services
+        if: always()
+        run: docker compose down -v --remove-orphans
+
+      - name: Fail if agent smoke eval failed
+        if: steps.eval_agent_smoke.outcome != 'success'
+        run: |
+          echo "Agent smoke eval failed. See eval_agent_summary.md and GitHub annotations for failed agent test IDs."
+          exit 1
+

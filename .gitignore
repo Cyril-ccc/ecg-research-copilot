@@ -1,0 +1,51 @@
+# === 1. 数据安全与合规 (最重要！绝对不能上传) ===
+# 严禁将 MIMIC-IV 或 MIMIC-IV-ECG 原始数据存入 Git
+/data/
+/datasets/mimic_iv/
+/datasets/mimic_iv_ecg/
+/datasets/ptbxl/
+*.hea
+*.dat
+*.csv
+# 如果你本地有 BigQuery 的凭证或本地 DB 的 dump
+*.sql
+!/evals/*.yaml  # 排除 eval 用的配置文件
+!/db/migrations/*.sql # 允许数据库迁移文件
+
+# === 2. 实验产物与运行日志 (按 run_id 产生的临时文件) ===
+/storage/artifacts/
+/storage/postgres/
+/storage/redis/
+logs/
+*.log
+.webcache/
+
+
+# 忽略环境依赖
+node_modules/
+__pycache__/
+venv/
+
+# 忽略真实的配置文件（你已经有 .env.example 做示范了，这很好！）
+.env
+.DS_Store
+# Eval run outputs
+/eval_runs/
+eval_results.json
+# ECG eval outputs
+eval_ecg_results*.json
+eval_report_results*.json
+eval_summary.md
+
+# === 3. 运行时存储 / 数据派生产物（严禁上传） ===
+/storage/
+/services/api/storage/
+
+# === 4. 个人求职材料 / 临时分析文档（按需保留本地） ===
+/docs/career_packets/
+/docs/RESUME_METRICS_CANDIDATES.md
+/llm.txt
+/llm.pdf
+
+# === 5. 公开仓库导出目录（由脚本生成，不回传到开发仓库） ===
+/public_repo_export/
