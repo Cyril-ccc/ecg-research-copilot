@@ -49,3 +49,6 @@ eval_summary.md
 
 # === 5. 公开仓库导出目录（由脚本生成，不回传到开发仓库） ===
 /public_repo_export/
+
+# 本地截图暂存目录
+/pic/
