@@ -86,6 +86,20 @@ jobs:
             --ecg-root /workspace/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1 \
             --schema mimiciv
 
+      - name: Build ECG manifest
+        run: |
+          docker compose run --rm -T \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            api /app/.venv/bin/python /workspace/scripts/build_ecg_manifest.py \
+            --database-url postgresql://ecg:ecg@db:5432/ecg \
+            --schema mimiciv \
+            --record-list-table record_list \
+            --data-dir /workspace/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1 \
+            --output-path /workspace/storage/ecg_manifest.parquet \
+            --batch-size 2000 \
+            --log-every 10000
+
       - name: Wait for API health
         run: |
           for i in {1..60}; do
@@ -191,6 +205,20 @@ jobs:
             --clinical-root /workspace/data/mimic-iv-clinical-database-demo-2.2 \
             --ecg-root /workspace/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1 \
             --schema mimiciv
+
+      - name: Build ECG manifest
+        run: |
+          docker compose run --rm -T \
+            -v "$PWD":/workspace \
+            -w /workspace \
+            api /app/.venv/bin/python /workspace/scripts/build_ecg_manifest.py \
+            --database-url postgresql://ecg:ecg@db:5432/ecg \
+            --schema mimiciv \
+            --record-list-table record_list \
+            --data-dir /workspace/data/mimic-iv-ecg-demo-diagnostic-electrocardiogram-matched-subset-demo-0.1 \
+            --output-path /workspace/storage/ecg_manifest.parquet \
+            --batch-size 2000 \
+            --log-every 10000
 
       - name: Wait for API health
         run: |
